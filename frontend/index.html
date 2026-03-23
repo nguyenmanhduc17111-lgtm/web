@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopOnline - Cửa hàng trực tuyến</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <h1>🛍️ HangCamShop</h1>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Tìm kiếm sản phẩm...">
+                <button id="searchBtn"><i class="fas fa-search"></i> Tìm kiếm</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- User Actions - CHỈ GIỮ LẠI 1 PHẦN NÀY -->
+                <div class="user-actions">
+                    <div class="auth-buttons">
+                        <button class="login-btn" onclick="openLoginModal()">
+                            <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                        </button>
+                        <button class="register-btn" onclick="openRegisterModal()">
+                            <i class="fas fa-user-plus"></i> Đăng ký
+                        </button>
+                    </div>
+                    <div class="user-info" style="display: none;">
+                        <span class="welcome-text">Xin chào, <span id="usernameDisplay"></span></span>
+                        <button class="logout-btn" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                        </button>
+                    </div>
+                </div>
+                <!-- Cart Icon -->
+                <div class="cart-icon" onclick="openCartModal()">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-count" id="cartCount">0</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation với danh mục -->
+    <nav>
+        <div class="nav-container">
+            <ul class="categories">
+                <li class="active" onclick="filterProducts('all')"><a href="#">🏠 Tất cả</a></li>
+                <li onclick="filterProducts('thoitrang')"><a href="#">👕 Thời trang</a></li>
+                <li onclick="filterProducts('dientu')"><a href="#">📱 Điện tử</a></li>
+                <li onclick="filterProducts('giadung')"><a href="#">🏠 Gia dụng</a></li>
+                <li onclick="filterProducts('sach')"><a href="#">📚 Sách</a></li>
+                <li onclick="filterProducts('thethao')"><a href="#">⚽ Thể thao</a></li>
+                <li onclick="filterProducts('lamdep')"><a href="#">💄 Làm đẹp</a></li>
+                <li onclick="filterProducts('thucpham')"><a href="#">🍎 Thực phẩm</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Banner -->
+    <section class="banner">
+        <div class="banner-content">
+            <h2>SIÊU SALE MÙA HÈ</h2>
+            <p>Giảm giá lên đến 50% cho tất cả sản phẩm</p>
+            <button class="shop-now-btn" onclick="scrollToProducts()">MUA SẮM NGAY</button>
+        </div>
+    </section>
+
+    <!-- Danh mục sản phẩm nổi bật -->
+    <section class="featured-categories">
+        <div class="container">
+            <h2 class="section-title">DANH MỤC NỔI BẬT</h2>
+            <div class="category-grid">
+                <div class="category-item" onclick="filterProducts('thoitrang')">
+                    <img src="https://via.placeholder.com/200x200" alt="Thời trang">
+                    <h3>Thời trang</h3>
+                </div>
+                <div class="category-item" onclick="filterProducts('dientu')">
+                    <img src="https://via.placeholder.com/200x200" alt="Điện tử">
+                    <h3>Điện tử</h3>
+                </div>
+                <div class="category-item" onclick="filterProducts('giadung')">
+                    <img src="https://via.placeholder.com/200x200" alt="Gia dụng">
+                    <h3>Gia dụng</h3>
+                </div>
+                <div class="category-item" onclick="filterProducts('sach')">
+                    <img src="https://via.placeholder.com/200x200" alt="Sách">
+                    <h3>Sách</h3>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sản phẩm -->
+    <section class="products" id="products">
+        <div class="container">
+            <h2 class="section-title">SẢN PHẨM CỦA CHÚNG TÔI</h2>
+            <div class="product-grid" id="productGrid">
+                <!-- Sản phẩm sẽ được load bằng JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Modal giỏ hàng -->
+    <div id="cartModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Giỏ hàng của bạn</h2>
+                <span class="close" onclick="closeCartModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="cartItems" class="cart-items">
+                    <!-- Giỏ hàng sẽ được load bằng JavaScript -->
+                </div>
+                <div class="cart-summary">
+                    <div class="summary-row">
+                        <span>Tạm tính:</span>
+                        <span id="subtotal">0đ</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Phí vận chuyển:</span>
+                        <span id="shipping">30.000đ</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Tổng cộng:</span>
+                        <span id="total">0đ</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCartModal()">Tiếp tục mua sắm</button>
+                <button class="btn btn-primary" onclick="openCheckoutModal()">Tiến hành thanh toán</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal thanh toán -->
+    <div id="checkoutModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Thông tin thanh toán</h2>
+                <span class="close" onclick="closeCheckoutModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="checkoutForm">
+                    <div class="form-group">
+                        <label for="fullName">Họ và tên:</label>
+                        <input type="text" id="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Số điện thoại:</label>
+                        <input type="tel" id="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Địa chỉ:</label>
+                        <textarea id="address" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="paymentMethod">Phương thức thanh toán:</label>
+                        <select id="paymentMethod" required>
+                            <option value="">Chọn phương thức</option>
+                            <option value="cod">Thanh toán khi nhận hàng (COD)</option>
+                            <option value="bank">Chuyển khoản ngân hàng</option>
+                            <option value="momo">Ví MoMo</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCheckoutModal()">Quay lại giỏ hàng</button>
+                <button class="btn btn-primary" onclick="processPayment()">Xác nhận thanh toán</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal thông báo -->
+    <div id="notificationModal" class="modal">
+        <div class="modal-content notification-modal">
+            <div class="modal-header">
+                <h2>Thông báo</h2>
+                <span class="close" onclick="closeNotificationModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="notificationMessage">
+                <!-- Nội dung thông báo -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeNotificationModal()">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal đăng nhập - ĐẶT Ở ĐÂY, TRƯỚC FOOTER -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Đăng nhập</h2>
+                <span class="close" onclick="closeLoginModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Tên đăng nhập:</label>
+                        <input type="text" id="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mật khẩu:</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary" onclick="login()">Đăng nhập</button>
+                    </div>
+                </form>
+                <p>Chưa có tài khoản? <a href="#" onclick="openRegisterModal(); closeLoginModal();">Đăng ký ngay</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal đăng ký - ĐẶT Ở ĐÂY, TRƯỚC FOOTER -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Đăng ký tài khoản</h2>
+                <span class="close" onclick="closeRegisterModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="regUsername">Tên đăng nhập:</label>
+                        <input type="text" id="regUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email:</label>
+                        <input type="email" id="regEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Mật khẩu:</label>
+                        <input type="password" id="regPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regConfirmPassword">Xác nhận mật khẩu:</label>
+                        <input type="password" id="regConfirmPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary" onclick="register()">Đăng ký</button>
+                    </div>
+                </form>
+                <p>Đã có tài khoản? <a href="#" onclick="openLoginModal(); closeRegisterModal();">Đăng nhập ngay</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3>Về chúng tôi</h3>
+                <p>ShopOnline là cửa hàng trực tuyến cung cấp đa dạng các sản phẩm chất lượng với giá cả hợp lý.</p>
+            </div>
+            <div class="footer-section">
+                <h3>Liên kết nhanh</h3>
+                <ul>
+                    <li><a href="#">Trang chủ</a></li>
+                    <li><a href="#">Sản phẩm</a></li>
+                    <li><a href="#">Giới thiệu</a></li>
+                    <li><a href="#">Liên hệ</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Thông tin liên hệ</h3>
+                <p><i class="fas fa-map-marker-alt"></i> 123 Đường ABC, Quận XYZ, TP.HCM</p>
+                <p><i class="fas fa-phone"></i> 0123 456 789</p>
+                <p><i class="fas fa-envelope"></i> info@shoponline.com</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 ShopOnline. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
