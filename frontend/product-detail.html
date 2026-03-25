@@ -43,10 +43,22 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
+        let currentUser = null;   // <<< thêm dòng này
         let currentProduct = null;
         let selectedColor = null;
         let selectedSize = null;
         let selectedVariant = null;
+
+        // Lấy thông tin user từ token (nếu có)
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                currentUser = { id: payload.id, name: payload.username };
+            } catch(e) {
+                console.error('Token không hợp lệ');
+            }
+        }
 
         function formatPrice(price) { return price.toLocaleString('vi-VN') + 'đ'; }
         function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
@@ -147,7 +159,47 @@
         }
 
         async function addToCart() {
-            alert('Đã thêm vào giỏ hàng (tính năng đang phát triển)');
+            if (!currentUser) {
+                alert('Vui lòng đăng nhập để mua hàng!');
+                // Mở modal đăng nhập nếu có (có thể dùng openLoginModal nếu đã định nghĩa)
+                if (typeof openLoginModal === 'function') openLoginModal();
+                else window.location.href = '/';
+                return;
+            }
+
+            if (currentProduct.variants && currentProduct.variants.length > 0 && !selectedVariant) {
+                alert('Vui lòng chọn màu sắc và kích cỡ!');
+                return;
+            }
+
+            const payload = {
+                productId: currentProduct.id,
+                quantity: 1
+            };
+            if (selectedVariant) {
+                payload.variantId = selectedVariant.id;
+            }
+
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/cart/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                alert(data.message);
+                // Cập nhật số lượng giỏ hàng nếu có hàm loadCartCount (định nghĩa trong script.js)
+                if (typeof loadCartCount === 'function') {
+                    await loadCartCount();
+                }
+            } catch (error) {
+                console.error('Lỗi:', error);
+                alert('Lỗi: ' + error.message);
+            }
         }
 
         async function loadReviews() {

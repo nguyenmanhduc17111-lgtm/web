@@ -248,21 +248,22 @@ function displayCartItems() {
     cartItemsEl.innerHTML = cart.map(item => {
         const itemTotal = item.price * item.quantity;
         subtotal += itemTotal;
+        const variantText = item.variant ? ` (${item.variant.color}${item.variant.size ? `, ${item.variant.size}` : ''})` : '';
         return `
-            <div class="cart-item">
+            <div class="cart-item" data-product-id="${item.id}" data-variant-id="${item.variant ? item.variant.id : ''}">
                 <img src="${item.image}" alt="${item.name}" class="cart-item-image">
                 <div class="cart-item-details">
-                    <div class="cart-item-title">${item.name}</div>
+                    <div class="cart-item-title">${item.name}${variantText}</div>
                     <div class="cart-item-price">${formatPrice(item.price)}</div>
                     <div class="cart-item-quantity">
-                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity - 1})">-</button>
+                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity - 1}, '${item.variant ? item.variant.id : ''}')">-</button>
                         <input type="number" class="quantity-input" value="${item.quantity}" min="1"
-                            onchange="updateQuantity(${item.id}, this.value)">
-                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity + 1})">+</button>
+                            onchange="updateQuantity(${item.id}, this.value, '${item.variant ? item.variant.id : ''}')">
+                        <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity + 1}, '${item.variant ? item.variant.id : ''}')">+</button>
                     </div>
                 </div>
                 <div class="cart-item-total">${formatPrice(itemTotal)}</div>
-                <i class="fas fa-trash remove-item" onclick="removeFromCart(${item.id})"></i>
+                <i class="fas fa-trash remove-item" onclick="removeFromCart(${item.id}, '${item.variant ? item.variant.id : ''}')"></i>
             </div>
         `;
     }).join('');
@@ -272,9 +273,12 @@ function displayCartItems() {
     document.getElementById('total').textContent = formatPrice(subtotal + shipping);
 }
 
-async function updateQuantity(productId, newQuantity) {
+async function updateQuantity(productId, newQuantity, variantId = '') {
     const qty = parseInt(newQuantity);
-    const data = await apiCall('/cart/update', 'PUT', { productId, quantity: qty });
+    const body = { productId, quantity: qty };
+    if (variantId) body.variantId = variantId;
+    const data = await apiCall('/cart/update', 'PUT', body);
+    showNotification(data.message);
     if (data.success) {
         await loadCartCount();
         const cartData = await apiCall('/cart');
@@ -285,8 +289,10 @@ async function updateQuantity(productId, newQuantity) {
     }
 }
 
-async function removeFromCart(productId) {
-    const data = await apiCall(`/cart/remove/${productId}`, 'DELETE');
+async function removeFromCart(productId, variantId = '') {
+    let url = `/cart/remove/${productId}`;
+    if (variantId) url += `?variantId=${variantId}`;
+    const data = await apiCall(url, 'DELETE');
     showNotification(data.message);
     if (data.success) {
         await loadCartCount();
