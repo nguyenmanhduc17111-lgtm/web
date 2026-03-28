@@ -19,7 +19,7 @@
                 <button id="searchBtn"><i class="fas fa-search"></i> Tìm kiếm</button>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <!-- User Actions - CHỈ GIỮ LẠI 1 PHẦN NÀY -->
+                <!-- User Actions -->
                 <div class="user-actions">
                     <div class="auth-buttons">
                         <button class="login-btn" onclick="openLoginModal()">
@@ -42,6 +42,12 @@
                     <span class="cart-count" id="cartCount">0</span>
                 </div>
             </div>
+        </div>
+        <!-- Seller menu (ẩn mặc định, sẽ hiện khi đăng nhập với role seller) -->
+        <div class="seller-menu" id="sellerMenu" style="display: none;">
+            <a href="/seller/products.html">📦 Quản lý sản phẩm</a>
+            <a href="/seller/store.html">🏪 Quản lý cửa hàng</a>
+            <a href="#" id="myStoreLink">🏬 Xem cửa hàng của tôi</a>
         </div>
     </header>
 
@@ -197,7 +203,7 @@
         </div>
     </div>
 
-    <!-- Modal đăng nhập - ĐẶT Ở ĐÂY, TRƯỚC FOOTER -->
+    <!-- Modal đăng nhập -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -223,7 +229,7 @@
         </div>
     </div>
 
-    <!-- Modal đăng ký - ĐẶT Ở ĐÂY, TRƯỚC FOOTER -->
+    <!-- Modal đăng ký - ĐÃ THÊM RADIO CHỌN ROLE VÀO ĐÂY -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -247,6 +253,14 @@
                     <div class="form-group">
                         <label for="regConfirmPassword">Xác nhận mật khẩu:</label>
                         <input type="password" id="regConfirmPassword" required>
+                    </div>
+                    <!-- Radio chọn role -->
+                    <div class="form-group">
+                        <label>Bạn là:</label>
+                        <div style="display: flex; gap: 20px;">
+                            <label><input type="radio" name="role" value="customer" checked> Người mua</label>
+                            <label><input type="radio" name="role" value="seller"> Người bán</label>
+                        </div>
                     </div>
                     <div class="form-group">
                         <button type="button" class="btn btn-primary" onclick="register()">Đăng ký</button>

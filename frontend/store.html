@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cửa hàng - HangCamShop</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .store-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            text-align: center;
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        .store-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid white;
+            margin-bottom: 15px;
+        }
+        .store-name {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .store-description {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .product-info {
+            padding: 15px;
+        }
+        .product-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .product-price {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        .error {
+            text-align: center;
+            color: red;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn-back" style="display: inline-block; margin-bottom: 20px;">← Quay lại trang chủ</a>
+        <div id="storeContent">
+            <div class="loading">Đang tải thông tin cửa hàng...</div>
+        </div>
+        <div id="productsContent">
+            <div class="loading">Đang tải sản phẩm...</div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('user_id');
+        
+        if (!userId) {
+            document.getElementById('storeContent').innerHTML = '<div class="error">Không tìm thấy ID cửa hàng.</div>';
+            document.getElementById('productsContent').innerHTML = '';
+        } else {
+            // Lấy thông tin cửa hàng
+            fetch(`/api/stores/user/${userId}`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Không tìm thấy cửa hàng');
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.success && data.store) {
+                        const store = data.store;
+                        document.getElementById('storeContent').innerHTML = `
+                            <div class="store-header">
+                                ${store.store_logo ? `<img src="${store.store_logo}" class="store-logo" alt="Logo">` : ''}
+                                <h1 class="store-name">${store.store_name || 'Cửa hàng'}</h1>
+                                <p class="store-description">${store.store_description || 'Chưa có mô tả'}</p>
+                            </div>
+                        `;
+                    } else {
+                        document.getElementById('storeContent').innerHTML = '<div class="error">Cửa hàng chưa được tạo.</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('storeContent').innerHTML = '<div class="error">Cửa hàng chưa được tạo.</div>';
+                });
+            
+            // Lấy danh sách sản phẩm của seller
+            fetch(`/api/products/seller/${userId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.products.length > 0) {
+                        let html = '<div class="product-grid">';
+                        data.products.forEach(p => {
+                            html += `
+                                <div class="product-card" onclick="location.href='/product-detail.html?id=${p.id}'">
+                                    <img src="${p.image}" alt="${p.name}">
+                                    <div class="product-info">
+                                        <div class="product-name">${p.name}</div>
+                                        <div class="product-price">${p.price.toLocaleString('vi-VN')}đ</div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        document.getElementById('productsContent').innerHTML = html;
+                    } else {
+                        document.getElementById('productsContent').innerHTML = '<div class="error">Chưa có sản phẩm nào.</div>';
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('productsContent').innerHTML = '<div class="error">Lỗi tải sản phẩm.</div>';
+                });
+        }
+        async function loadStore() {
+    const res = await fetch(`${API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (data.success && data.user.role === 'seller') {
+        const userId = data.user.id;
+        console.log('Fetching store for user:', userId);
+        const storeRes = await fetch(`${API_URL}/stores/user/${userId}`);
+        const storeData = await storeRes.json();
+        console.log('Store data:', storeData);
+        if (storeData.success) {
+            document.getElementById('storeName').value = storeData.store.store_name || '';
+            document.getElementById('storeDescription').value = storeData.store.store_description || '';
+            document.getElementById('storeLogo').value = storeData.store.store_logo || '';
+            document.getElementById('storeBanner').value = storeData.store.store_banner || '';
+        } else {
+            alert('Không tìm thấy cửa hàng: ' + storeData.message);
+        }
+    } else {
+        alert('Bạn không có quyền!');
+        window.location.href = '/';
+    }
+}
+    </script> 
+</body>
+</html>

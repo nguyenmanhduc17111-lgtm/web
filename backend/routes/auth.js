@@ -7,8 +7,9 @@ const db = require('../database/db');
 const JWT_SECRET = process.env.JWT_SECRET || 'hangcamshop_secret_2024';
 const SALT_ROUNDS = 10;
 
+// Đăng ký (có role)
 router.post('/register', (req, res) => {
-    const { username, email, password } = req.body;
+    const { username, email, password, role } = req.body; // thêm role
 
     if (!username || !email || !password) {
         return res.status(400).json({ success: false, message: 'Vui lòng điền đầy đủ thông tin!' });
@@ -16,6 +17,9 @@ router.post('/register', (req, res) => {
     if (password.length < 6) {
         return res.status(400).json({ success: false, message: 'Mật khẩu phải có ít nhất 6 ký tự!' });
     }
+
+    // Xác định role: nếu gửi lên 'seller' thì set seller, mặc định là 'customer'
+    const userRole = (role === 'seller') ? 'seller' : 'customer';
 
     db.get('SELECT id FROM users WHERE username = ? OR email = ?', [username, email], (err, row) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi server!' });
@@ -25,8 +29,8 @@ router.post('/register', (req, res) => {
             if (err) return res.status(500).json({ success: false, message: 'Lỗi khi mã hóa mật khẩu!' });
 
             db.run(
-                'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
-                [username, email, hashedPassword],
+                'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+                [username, email, hashedPassword, userRole],
                 function(err) {
                     if (err) return res.status(500).json({ success: false, message: 'Lỗi khi tạo tài khoản!' });
                     res.status(201).json({ success: true, message: 'Đăng ký thành công! Vui lòng đăng nhập.' });
@@ -36,9 +40,9 @@ router.post('/register', (req, res) => {
     });
 });
 
+// Đăng nhập (giữ nguyên)
 router.post('/login', (req, res) => {
     const { username, password } = req.body;
-
     if (!username || !password) {
         return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin!' });
     }
@@ -68,6 +72,7 @@ router.post('/login', (req, res) => {
     });
 });
 
+// Lấy thông tin người dùng hiện tại (có role)
 router.get('/me', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false, message: 'Chưa đăng nhập!' });

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { authenticate, requireSeller } = require('../middleware/auth');
+
+
 
 router.get('/', (req, res) => {
     const { category, search } = req.query;
@@ -51,6 +54,66 @@ router.get('/:id', (req, res) => {
                 res.json({ success: true, product });
             });
         });
+    });
+});
+
+router.post('/', authenticate, requireSeller, (req, res) => {
+    const { name, price, old_price, image, category, description, stock, tag } = req.body;
+    const userId = req.user.id;
+    console.log('Adding product for user:', userId, 'data:', req.body); // log
+
+    db.run(
+        `INSERT INTO products (user_id, name, price, old_price, image, category, description, stock, tag)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, name, price, old_price, image, category, description, stock, tag],
+        function(err) {
+            if (err) {
+                console.error('❌ Database error:', err.message); // log lỗi
+                return res.status(500).json({ success: false, message: 'Lỗi thêm sản phẩm: ' + err.message });
+            }
+            res.json({ success: true, message: 'Đã thêm sản phẩm', productId: this.lastID });
+        }
+    );
+});
+
+router.put('/:id', authenticate, requireSeller, (req, res) => {
+    const productId = req.params.id;
+    const userId = req.user.id;
+    const updates = req.body;
+    // Kiểm tra sản phẩm thuộc về seller
+    db.get('SELECT * FROM products WHERE id = ? AND user_id = ?', [productId, userId], (err, product) => {
+        if (err || !product) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm hoặc không có quyền!' });
+        // Thực hiện cập nhật
+        db.run(`UPDATE products SET name=?, price=?, old_price=?, image=?, category=?, description=?, stock=?, tag=? WHERE id=?`,
+            [updates.name, updates.price, updates.old_price, updates.image, updates.category, updates.description, updates.stock, updates.tag, productId],
+            (err) => {
+                if (err) return res.status(500).json({ success: false, message: 'Lỗi cập nhật!' });
+                res.json({ success: true, message: 'Cập nhật thành công' });
+            }
+        );
+    });
+});
+
+
+router.delete('/:id', authenticate, requireSeller, (req, res) => {
+    const productId = req.params.id;
+    const userId = req.user.id;
+    db.get('SELECT * FROM products WHERE id = ? AND user_id = ?', [productId, userId], (err, product) => {
+        if (err || !product) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm hoặc không có quyền!' });
+        db.run('DELETE FROM products WHERE id = ?', [productId], (err) => {
+            if (err) return res.status(500).json({ success: false, message: 'Lỗi xóa!' });
+            res.json({ success: true, message: 'Đã xóa sản phẩm' });
+        });
+    });
+});
+
+
+// Lấy sản phẩm của một seller cụ thể
+router.get('/seller/:sellerId', (req, res) => {
+    const sellerId = req.params.sellerId;
+    db.all('SELECT * FROM products WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC', [sellerId], (err, rows) => {
+        if (err) return res.status(500).json({ success: false, message: 'Lỗi server!' });
+        res.json({ success: true, products: rows });
     });
 });
 

@@ -400,6 +400,7 @@ async function register() {
     const email = document.getElementById('regEmail').value;
     const password = document.getElementById('regPassword').value;
     const confirmPassword = document.getElementById('regConfirmPassword').value;
+    const role = document.querySelector('input[name="role"]:checked').value; // thêm dòng này
 
     if (!username || !email || !password || !confirmPassword) {
         showNotification('Vui lòng điền đầy đủ thông tin!');
@@ -414,9 +415,9 @@ async function register() {
         return;
     }
 
-    const data = await apiCall('/auth/register', 'POST', { username, email, password });
+    // Gửi thêm trường role
+    const data = await apiCall('/auth/register', 'POST', { username, email, password, role });
     showNotification(data.message);
-
     if (data.success) {
         closeRegisterModal();
         openLoginModal();
@@ -446,9 +447,20 @@ function updateUserUI() {
         document.querySelector('.auth-buttons').style.display = 'none';
         document.querySelector('.user-info').style.display = 'flex';
         document.getElementById('usernameDisplay').textContent = currentUser.username;
+
+        // Xử lý menu seller
+        const sellerMenu = document.getElementById('sellerMenu');
+        if (currentUser.role === 'seller') {
+            sellerMenu.style.display = 'block';
+            document.getElementById('myStoreLink').href = `/store.html?user_id=${currentUser.id}`;
+        } else {
+            sellerMenu.style.display = 'none';
+        }
     } else {
         document.querySelector('.auth-buttons').style.display = 'flex';
         document.querySelector('.user-info').style.display = 'none';
+        const sellerMenu = document.getElementById('sellerMenu');
+        if (sellerMenu) sellerMenu.style.display = 'none';
     }
 }
 

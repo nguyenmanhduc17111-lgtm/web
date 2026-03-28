@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý sản phẩm - HangCamShop</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .product-form { background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .product-list { margin-top: 30px; }
+        .product-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .product-actions button { margin-left: 10px; background: #e74c3c; }
+        .product-actions .edit-btn { background: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quản lý sản phẩm</h1>
+        <div class="product-form">
+            <h3>Thêm sản phẩm mới</h3>
+            <form id="addProductForm">
+                <div class="form-group">
+                    <label>Tên sản phẩm:</label>
+                    <input type="text" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label>Giá (VNĐ):</label>
+                    <input type="number" id="productPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Giá cũ (nếu có):</label>
+                    <input type="number" id="productOldPrice">
+                </div>
+                <div class="form-group">
+                    <label>Danh mục:</label>
+                    <select id="productCategory">
+                        <option value="thoitrang">Thời trang</option>
+                        <option value="dientu">Điện tử</option>
+                        <option value="giadung">Gia dụng</option>
+                        <option value="sach">Sách</option>
+                        <option value="thethao">Thể thao</option>
+                        <option value="lamdep">Làm đẹp</option>
+                        <option value="thucpham">Thực phẩm</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ảnh (URL):</label>
+                    <input type="text" id="productImage" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label>Mô tả:</label>
+                    <textarea id="productDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tồn kho:</label>
+                    <input type="number" id="productStock" value="100">
+                </div>
+                <div class="form-group">
+                    <label>Thẻ (sale/new):</label>
+                    <select id="productTag">
+                        <option value="">Không</option>
+                        <option value="sale">Giảm giá</option>
+                        <option value="new">Mới</option>
+                    </select>
+                </div>
+                <button type="button" onclick="addProduct()">Thêm sản phẩm</button>
+            </form>
+        </div>
+
+        <div class="product-list">
+            <h3>Danh sách sản phẩm của bạn</h3>
+            <div id="productList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        async function fetchProducts() {
+            const res = await fetch(`${API_URL}/products/seller/${currentUser.id}`);
+            const data = await res.json();
+            if (data.success) {
+                const list = document.getElementById('productList');
+                list.innerHTML = data.products.map(p => `
+                    <div class="product-item" data-id="${p.id}">
+                        <div>
+                            <strong>${p.name}</strong> - ${p.price.toLocaleString()}đ<br>
+                            <small>${p.category} | Stock: ${p.stock}</small>
+                        </div>
+                        <div class="product-actions">
+                            <button class="edit-btn" onclick="editProduct(${p.id})">Sửa</button>
+                            <button onclick="deleteProduct(${p.id})">Xóa</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function addProduct() {
+            const product = {
+                name: document.getElementById('productName').value,
+                price: parseInt(document.getElementById('productPrice').value),
+                old_price: parseInt(document.getElementById('productOldPrice').value) || null,
+                image: document.getElementById('productImage').value,
+                category: document.getElementById('productCategory').value,
+                description: document.getElementById('productDescription').value,
+                stock: parseInt(document.getElementById('productStock').value),
+                tag: document.getElementById('productTag').value
+            };
+            const res = await fetch(`${API_URL}/products`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(product)
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) fetchProducts();
+        }
+
+        async function deleteProduct(id) {
+            if (confirm('Xóa sản phẩm này?')) {
+                const res = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) fetchProducts();
+            }
+        }
+
+        async function editProduct(id) {
+            // Đơn giản hóa: chuyển hướng đến trang sửa (có thể tạo sau)
+            window.location.href = `/seller/edit-product.html?id=${id}`;
+        }
+
+        // Lấy thông tin user hiện tại
+        let currentUser = null;
+        async function checkAuth() {
+            const res = await fetch(`${API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success && data.user.role === 'seller') {
+                currentUser = data.user;
+                fetchProducts();
+            } else {
+                alert('Bạn không có quyền truy cập!');
+                window.location.href = '/';
+            }
+        }
+        checkAuth();
+    </script>
+</body>
+</html>

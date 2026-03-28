@@ -17,10 +17,11 @@ function initializeDatabase() {
             else console.log('✅ Bảng users đã sẵn sàng');
         });
 
-        // Bảng products
+        // Bảng products (thêm cột user_id)
         db.run(`
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
                 name TEXT NOT NULL,
                 price INTEGER NOT NULL,
                 old_price INTEGER,
@@ -128,6 +129,23 @@ function initializeDatabase() {
         `, (err) => {
             if (err) console.error('❌ Lỗi tạo bảng product_images:', err.message);
             else console.log('✅ Bảng product_images đã sẵn sàng');
+        });
+
+        // Bảng stores (sửa tore_banner thành store_banner)
+        db.run(`
+            CREATE TABLE IF NOT EXISTS stores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                store_name TEXT NOT NULL,
+                store_description TEXT,
+                store_logo TEXT,
+                store_banner TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `, (err) => {
+            if (err) console.error('❌ Lỗi tạo bảng stores:', err.message);
+            else console.log('✅ Bảng stores đã sẵn sàng');
         });
 
         // Bảng product_variants

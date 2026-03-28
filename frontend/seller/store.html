@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý cửa hàng - HangCamShop</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        .store-form { max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quản lý cửa hàng</h1>
+        <div class="store-form">
+            <form id="storeForm">
+                <div class="form-group">
+                    <label>Tên cửa hàng:</label>
+                    <input type="text" id="storeName" required>
+                </div>
+                <div class="form-group">
+                    <label>Mô tả:</label>
+                    <textarea id="storeDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Logo (URL):</label>
+                    <input type="text" id="storeLogo">
+                </div>
+                <div class="form-group">
+                    <label>Banner (URL):</label>
+                    <input type="text" id="storeBanner">
+                </div>
+                <button type="button" onclick="saveStore()">Lưu thông tin</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('token');
+
+        async function loadStore() {
+            const res = await fetch(`${API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success && data.user.role === 'seller') {
+                const userId = data.user.id;
+                const storeRes = await fetch(`${API_URL}/stores/user/${userId}`);
+                const storeData = await storeRes.json();
+                if (storeData.success) {
+                    document.getElementById('storeName').value = storeData.store.store_name || '';
+                    document.getElementById('storeDescription').value = storeData.store.store_description || '';
+                    document.getElementById('storeLogo').value = storeData.store.store_logo || '';
+                    document.getElementById('storeBanner').value = storeData.store.store_banner || '';
+                }
+            } else {
+                alert('Bạn không có quyền!');
+                window.location.href = '/';
+            }
+        }
+
+        async function saveStore() {
+            const store = {
+                store_name: document.getElementById('storeName').value,
+                store_description: document.getElementById('storeDescription').value,
+                store_logo: document.getElementById('storeLogo').value,
+                store_banner: document.getElementById('storeBanner').value
+            };
+            const res = await fetch(`${API_URL}/stores`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(store)
+            });
+            const data = await res.json();
+            alert(data.message);
+        }
+
+        loadStore();
+    </script>
+</body>
+</html>
