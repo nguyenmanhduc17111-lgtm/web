@@ -1,3 +1,4 @@
+const { createNotification } = require('./notifications');
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -15,7 +16,7 @@ function authMiddleware(req, res, next) {
     });
 }
 
-router.post('/create', authMiddleware, (req, res) => {
+router.post('/create', authMiddleware, async (req, res) => {
     const { fullName, email, phone, address, paymentMethod } = req.body;
     const userId = req.user.id;
 
@@ -24,13 +25,13 @@ router.post('/create', authMiddleware, (req, res) => {
     }
 
     const cartSQL = `
-        SELECT c.quantity, c.product_id, p.name, p.price
+        SELECT c.quantity, c.product_id, p.name, p.price, p.user_id as seller_id
         FROM cart c
         JOIN products p ON c.product_id = p.id
         WHERE c.user_id = ?
     `;
 
-    db.all(cartSQL, [userId], (err, cartItems) => {
+    db.all(cartSQL, [userId], async (err, cartItems) => {
         if (err) return res.status(500).json({ success: false, message: 'Lỗi server!' });
         if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({ success: false, message: 'Giỏ hàng trống!' });
@@ -44,7 +45,7 @@ router.post('/create', authMiddleware, (req, res) => {
             `INSERT INTO orders (user_id, full_name, email, phone, address, payment_method, total_amount, shipping_fee)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [userId, fullName, email, phone, address, paymentMethod, totalAmount, shippingFee],
-            function(err) {
+            async function(err) {
                 if (err) return res.status(500).json({ success: false, message: 'Lỗi tạo đơn!' });
 
                 const orderId = this.lastID;
@@ -59,6 +60,30 @@ router.post('/create', authMiddleware, (req, res) => {
                 stmt.finalize();
 
                 db.run('DELETE FROM cart WHERE user_id = ?', [userId]);
+
+                // 1. Thông báo cho người mua
+                await createNotification(
+                    userId,
+                    'order_placed',
+                    'Đặt hàng thành công',
+                    `Đơn hàng #${orderId} đã được tạo với tổng tiền ${totalAmount.toLocaleString()}đ.`,
+                    { orderId, totalAmount }
+                );
+
+                // 2. Thông báo cho từng seller (mỗi shop chỉ một lần)
+                const sellerNotified = new Set();
+                for (const item of cartItems) {
+                    if (item.seller_id && !sellerNotified.has(item.seller_id)) {
+                        sellerNotified.add(item.seller_id);
+                        await createNotification(
+                            item.seller_id,
+                            'new_order',
+                            'Có đơn hàng mới',
+                            `${fullName} vừa đặt sản phẩm "${item.name}" (x${item.quantity}) với giá ${(item.price * item.quantity).toLocaleString()}đ.`,
+                            { orderId, buyerName: fullName, productName: item.name, quantity: item.quantity, total: item.price * item.quantity }
+                        );
+                    }
+                }
 
                 res.status(201).json({
                     success: true,

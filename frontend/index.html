@@ -4,8 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShopOnline - Cửa hàng trực tuyến</title>
-    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Reset & base styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 15px; }
+
+        /* Header */
+        header { background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 15px 0; }
+        .header-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; padding: 0 15px; }
+        .logo h1 { color: #e74c3c; font-size: 24px; }
+        .search-bar { display: flex; gap: 10px; flex: 1; max-width: 400px; }
+        .search-bar input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .search-bar button { background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
+        .user-actions { display: flex; gap: 10px; }
+        .user-actions button { background: none; border: 1px solid #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .cart-icon { position: relative; cursor: pointer; font-size: 24px; }
+        .cart-count { position: absolute; top: -8px; right: -8px; background: red; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; }
+
+        /* Notification Icon & Dropdown */
+        .notification-icon {
+            position: relative;
+            cursor: pointer;
+            font-size: 24px;
+            margin-left: 15px;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            min-width: 18px;
+            text-align: center;
+        }
+        .notification-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            width: 320px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dropdown-header {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .notification-item.unread {
+            background: #f0f7ff;
+        }
+        .notification-item:hover {
+            background: #f5f5f5;
+        }
+
+        /* Seller menu */
+        .seller-menu { background: #f8f9fa; padding: 8px 0; text-align: center; border-top: 1px solid #eee; margin-top: 10px; }
+        .seller-menu a { margin: 0 15px; text-decoration: none; color: #333; font-size: 14px; }
+
+        /* Categories nav */
+        nav { background: #fff; border-bottom: 1px solid #eee; }
+        .categories { display: flex; justify-content: center; list-style: none; gap: 20px; padding: 12px 0; flex-wrap: wrap; }
+        .categories li { cursor: pointer; }
+        .categories li a { text-decoration: none; color: #333; padding: 5px 10px; }
+        .categories li.active a { color: #e74c3c; font-weight: bold; }
+
+        /* Banner */
+        .banner { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; padding: 60px 20px; margin: 20px 0; }
+        .banner h2 { font-size: 36px; margin-bottom: 10px; }
+        .shop-now-btn { background: #e74c3c; color: white; border: none; padding: 12px 30px; border-radius: 30px; font-size: 16px; cursor: pointer; margin-top: 15px; }
+
+        /* Featured categories */
+        .featured-categories { margin: 40px 0; }
+        .section-title { text-align: center; margin-bottom: 30px; font-size: 28px; }
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .category-item { background: white; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .category-item img { width: 100%; max-width: 150px; height: auto; border-radius: 50%; margin-bottom: 10px; }
+
+        /* Products grid */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .product-card { background: white; border-radius: 8px; overflow: hidden; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .product-image { position: relative; }
+        .product-image img { width: 100%; height: 200px; object-fit: cover; }
+        .product-tag { position: absolute; top: 10px; left: 10px; background: #e74c3c; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+        .product-info { padding: 15px; }
+        .product-info h3 { font-size: 16px; margin-bottom: 8px; }
+        .product-price .current-price { color: #e74c3c; font-weight: bold; font-size: 18px; }
+        .product-price .old-price { text-decoration: line-through; color: #999; font-size: 14px; margin-left: 8px; }
+        .product-rating { margin: 8px 0; color: #f39c12; font-size: 14px; }
+        .add-to-cart { background: #2ecc71; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 50px auto; max-width: 500px; border-radius: 8px; }
+        .modal-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .modal-body { padding: 15px; }
+        .modal-footer { padding: 15px; border-top: 1px solid #eee; text-align: right; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .close { cursor: pointer; font-size: 24px; }
+
+        /* Footer */
+        footer { background: #333; color: white; padding: 40px 0 20px; margin-top: 40px; }
+        .footer-container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; padding: 0 15px; }
+        .footer-section h3 { margin-bottom: 15px; }
+        .footer-section ul { list-style: none; }
+        .footer-section ul li { margin-bottom: 8px; }
+        .footer-section a { color: #ccc; text-decoration: none; }
+        .footer-bottom { text-align: center; padding-top: 20px; margin-top: 20px; border-top: 1px solid #555; }
+    </style>
 </head>
 <body>
     <!-- Header -->
@@ -40,6 +170,18 @@
                 <div class="cart-icon" onclick="openCartModal()">
                     <i class="fas fa-shopping-cart"></i>
                     <span class="cart-count" id="cartCount">0</span>
+                </div>
+                <!-- Notification Icon -->
+                <div class="notification-icon" onclick="toggleNotificationDropdown()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                </div>
+                <div id="notificationDropdown" class="notification-dropdown" style="display: none;">
+                    <div class="dropdown-header">
+                        <span>Thông báo</span>
+                        <button onclick="markAllNotificationsRead()">Đánh dấu đã đọc</button>
+                    </div>
+                    <div id="notificationList"></div>
                 </div>
             </div>
         </div>
@@ -119,22 +261,11 @@
                 <span class="close" onclick="closeCartModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <div id="cartItems" class="cart-items">
-                    <!-- Giỏ hàng sẽ được load bằng JavaScript -->
-                </div>
+                <div id="cartItems" class="cart-items"></div>
                 <div class="cart-summary">
-                    <div class="summary-row">
-                        <span>Tạm tính:</span>
-                        <span id="subtotal">0đ</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Phí vận chuyển:</span>
-                        <span id="shipping">30.000đ</span>
-                    </div>
-                    <div class="summary-row total">
-                        <span>Tổng cộng:</span>
-                        <span id="total">0đ</span>
-                    </div>
+                    <div class="summary-row"><span>Tạm tính:</span><span id="subtotal">0đ</span></div>
+                    <div class="summary-row"><span>Phí vận chuyển:</span><span id="shipping">30.000đ</span></div>
+                    <div class="summary-row total"><span>Tổng cộng:</span><span id="total">0đ</span></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -153,24 +284,11 @@
             </div>
             <div class="modal-body">
                 <form id="checkoutForm">
-                    <div class="form-group">
-                        <label for="fullName">Họ và tên:</label>
-                        <input type="text" id="fullName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email:</label>
-                        <input type="email" id="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone">Số điện thoại:</label>
-                        <input type="tel" id="phone" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="address">Địa chỉ:</label>
-                        <textarea id="address" rows="3" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="paymentMethod">Phương thức thanh toán:</label>
+                    <div class="form-group"><label for="fullName">Họ và tên:</label><input type="text" id="fullName" required></div>
+                    <div class="form-group"><label for="email">Email:</label><input type="email" id="email" required></div>
+                    <div class="form-group"><label for="phone">Số điện thoại:</label><input type="tel" id="phone" required></div>
+                    <div class="form-group"><label for="address">Địa chỉ:</label><textarea id="address" rows="3" required></textarea></div>
+                    <div class="form-group"><label for="paymentMethod">Phương thức thanh toán:</label>
                         <select id="paymentMethod" required>
                             <option value="">Chọn phương thức</option>
                             <option value="cod">Thanh toán khi nhận hàng (COD)</option>
@@ -190,71 +308,37 @@
     <!-- Modal thông báo -->
     <div id="notificationModal" class="modal">
         <div class="modal-content notification-modal">
-            <div class="modal-header">
-                <h2>Thông báo</h2>
-                <span class="close" onclick="closeNotificationModal()">&times;</span>
-            </div>
-            <div class="modal-body" id="notificationMessage">
-                <!-- Nội dung thông báo -->
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="closeNotificationModal()">Đóng</button>
-            </div>
+            <div class="modal-header"><h2>Thông báo</h2><span class="close" onclick="closeNotificationModal()">&times;</span></div>
+            <div class="modal-body" id="notificationMessage"></div>
+            <div class="modal-footer"><button class="btn btn-primary" onclick="closeNotificationModal()">Đóng</button></div>
         </div>
     </div>
 
     <!-- Modal đăng nhập -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>Đăng nhập</h2>
-                <span class="close" onclick="closeLoginModal()">&times;</span>
-            </div>
+            <div class="modal-header"><h2>Đăng nhập</h2><span class="close" onclick="closeLoginModal()">&times;</span></div>
             <div class="modal-body">
                 <form id="loginForm">
-                    <div class="form-group">
-                        <label for="username">Tên đăng nhập:</label>
-                        <input type="text" id="username" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Mật khẩu:</label>
-                        <input type="password" id="password" required>
-                    </div>
-                    <div class="form-group">
-                        <button type="button" class="btn btn-primary" onclick="login()">Đăng nhập</button>
-                    </div>
+                    <div class="form-group"><label for="username">Tên đăng nhập:</label><input type="text" id="username" required></div>
+                    <div class="form-group"><label for="password">Mật khẩu:</label><input type="password" id="password" required></div>
+                    <div class="form-group"><button type="button" class="btn btn-primary" onclick="login()">Đăng nhập</button></div>
                 </form>
                 <p>Chưa có tài khoản? <a href="#" onclick="openRegisterModal(); closeLoginModal();">Đăng ký ngay</a></p>
             </div>
         </div>
     </div>
 
-    <!-- Modal đăng ký - ĐÃ THÊM RADIO CHỌN ROLE VÀO ĐÂY -->
+    <!-- Modal đăng ký -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>Đăng ký tài khoản</h2>
-                <span class="close" onclick="closeRegisterModal()">&times;</span>
-            </div>
+            <div class="modal-header"><h2>Đăng ký tài khoản</h2><span class="close" onclick="closeRegisterModal()">&times;</span></div>
             <div class="modal-body">
                 <form id="registerForm">
-                    <div class="form-group">
-                        <label for="regUsername">Tên đăng nhập:</label>
-                        <input type="text" id="regUsername" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="regEmail">Email:</label>
-                        <input type="email" id="regEmail" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="regPassword">Mật khẩu:</label>
-                        <input type="password" id="regPassword" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="regConfirmPassword">Xác nhận mật khẩu:</label>
-                        <input type="password" id="regConfirmPassword" required>
-                    </div>
-                    <!-- Radio chọn role -->
+                    <div class="form-group"><label for="regUsername">Tên đăng nhập:</label><input type="text" id="regUsername" required></div>
+                    <div class="form-group"><label for="regEmail">Email:</label><input type="email" id="regEmail" required></div>
+                    <div class="form-group"><label for="regPassword">Mật khẩu:</label><input type="password" id="regPassword" required></div>
+                    <div class="form-group"><label for="regConfirmPassword">Xác nhận mật khẩu:</label><input type="password" id="regConfirmPassword" required></div>
                     <div class="form-group">
                         <label>Bạn là:</label>
                         <div style="display: flex; gap: 20px;">
@@ -262,9 +346,7 @@
                             <label><input type="radio" name="role" value="seller"> Người bán</label>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <button type="button" class="btn btn-primary" onclick="register()">Đăng ký</button>
-                    </div>
+                    <div class="form-group"><button type="button" class="btn btn-primary" onclick="register()">Đăng ký</button></div>
                 </form>
                 <p>Đã có tài khoản? <a href="#" onclick="openLoginModal(); closeRegisterModal();">Đăng nhập ngay</a></p>
             </div>
@@ -274,29 +356,11 @@
     <!-- Footer -->
     <footer>
         <div class="footer-container">
-            <div class="footer-section">
-                <h3>Về chúng tôi</h3>
-                <p>ShopOnline là cửa hàng trực tuyến cung cấp đa dạng các sản phẩm chất lượng với giá cả hợp lý.</p>
-            </div>
-            <div class="footer-section">
-                <h3>Liên kết nhanh</h3>
-                <ul>
-                    <li><a href="#">Trang chủ</a></li>
-                    <li><a href="#">Sản phẩm</a></li>
-                    <li><a href="#">Giới thiệu</a></li>
-                    <li><a href="#">Liên hệ</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Thông tin liên hệ</h3>
-                <p><i class="fas fa-map-marker-alt"></i> 123 Đường ABC, Quận XYZ, TP.HCM</p>
-                <p><i class="fas fa-phone"></i> 0123 456 789</p>
-                <p><i class="fas fa-envelope"></i> info@shoponline.com</p>
-            </div>
+            <div class="footer-section"><h3>Về chúng tôi</h3><p>ShopOnline là cửa hàng trực tuyến cung cấp đa dạng các sản phẩm chất lượng với giá cả hợp lý.</p></div>
+            <div class="footer-section"><h3>Liên kết nhanh</h3><ul><li><a href="#">Trang chủ</a></li><li><a href="#">Sản phẩm</a></li><li><a href="#">Giới thiệu</a></li><li><a href="#">Liên hệ</a></li></ul></div>
+            <div class="footer-section"><h3>Thông tin liên hệ</h3><p><i class="fas fa-map-marker-alt"></i> 123 Đường ABC, Quận XYZ, TP.HCM</p><p><i class="fas fa-phone"></i> 0123 456 789</p><p><i class="fas fa-envelope"></i> info@shoponline.com</p></div>
         </div>
-        <div class="footer-bottom">
-            <p>&copy; 2024 ShopOnline. All rights reserved.</p>
-        </div>
+        <div class="footer-bottom"><p>&copy; 2024 ShopOnline. All rights reserved.</p></div>
     </footer>
 
     <script src="script.js"></script>

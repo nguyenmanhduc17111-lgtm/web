@@ -10,7 +10,10 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input, textarea, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button { padding: 8px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; }
+        .image-item, .variant-item { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+        .image-item input { flex: 1; }
+        .variant-item input { flex: 1; min-width: 80px; }
         .product-list { margin-top: 30px; }
         .product-item { background: white; padding: 15px; margin-bottom: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
         .product-actions button { margin-left: 10px; background: #e74c3c; }
@@ -48,15 +51,40 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Ảnh (URL):</label>
-                    <input type="text" id="productImage" placeholder="https://example.com/image.jpg">
+                    <label>Ảnh đại diện (URL):</label>
+                    <input type="text" id="productImage" placeholder="https://example.com/main.jpg">
+                </div>
+                <div class="form-group">
+                    <label>Ảnh phụ (có thể thêm nhiều):</label>
+                    <div id="imagesContainer">
+                        <div class="image-item">
+                            <input type="text" class="image-url" placeholder="URL ảnh phụ 1">
+                            <button type="button" onclick="removeImage(this)">Xóa</button>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addImageField()">+ Thêm ảnh phụ</button>
+                </div>
+                <div class="form-group">
+                    <label>Biến thể (màu sắc, kích cỡ) – tùy chọn:</label>
+                    <div id="variantsContainer">
+                        <div class="variant-item">
+                            <input type="text" class="variant-color" placeholder="Màu (VD: Đen)">
+                            <input type="text" class="variant-size" placeholder="Size (VD: M)">
+                            <input type="number" class="variant-price" placeholder="Giá (VNĐ)">
+                            <input type="number" class="variant-stock" placeholder="Tồn kho">
+                            <input type="text" class="variant-image" placeholder="URL ảnh (tùy chọn)">
+                            <button type="button" onclick="removeVariant(this)">Xóa</button>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addVariantField()">+ Thêm biến thể</button>
+                    <small>Để trống nếu sản phẩm không có màu/size.</small>
                 </div>
                 <div class="form-group">
                     <label>Mô tả:</label>
                     <textarea id="productDescription" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label>Tồn kho:</label>
+                    <label>Tồn kho (mặc định):</label>
                     <input type="number" id="productStock" value="100">
                 </div>
                 <div class="form-group">
@@ -80,17 +108,51 @@
     <script>
         const API_URL = 'http://localhost:5000/api';
         const token = localStorage.getItem('token');
+        let currentUser = null;
 
+        // Thêm trường ảnh phụ
+        function addImageField() {
+            const container = document.getElementById('imagesContainer');
+            const div = document.createElement('div');
+            div.className = 'image-item';
+            div.innerHTML = `<input type="text" class="image-url" placeholder="URL ảnh phụ"><button type="button" onclick="removeImage(this)">Xóa</button>`;
+            container.appendChild(div);
+        }
+        function removeImage(btn) { btn.parentElement.remove(); }
+
+        // Thêm trường biến thể
+        function addVariantField() {
+            const container = document.getElementById('variantsContainer');
+            const div = document.createElement('div');
+            div.className = 'variant-item';
+            div.innerHTML = `
+                <input type="text" class="variant-color" placeholder="Màu">
+                <input type="text" class="variant-size" placeholder="Size">
+                <input type="number" class="variant-price" placeholder="Giá">
+                <input type="number" class="variant-stock" placeholder="Tồn kho">
+                <input type="text" class="variant-image" placeholder="URL ảnh (tùy chọn)">
+                <button type="button" onclick="removeVariant(this)">Xóa</button>
+            `;
+            container.appendChild(div);
+        }
+        function removeVariant(btn) { btn.parentElement.remove(); }
+
+        // Lấy danh sách sản phẩm của seller
         async function fetchProducts() {
+            if (!currentUser) return;
             const res = await fetch(`${API_URL}/products/seller/${currentUser.id}`);
             const data = await res.json();
             if (data.success) {
                 const list = document.getElementById('productList');
+                if (data.products.length === 0) {
+                    list.innerHTML = '<p>Chưa có sản phẩm nào. Hãy thêm sản phẩm mới.</p>';
+                    return;
+                }
                 list.innerHTML = data.products.map(p => `
                     <div class="product-item" data-id="${p.id}">
                         <div>
                             <strong>${p.name}</strong> - ${p.price.toLocaleString()}đ<br>
-                            <small>${p.category} | Stock: ${p.stock}</small>
+                            <small>${p.category} | Tồn kho: ${p.stock}</small>
                         </div>
                         <div class="product-actions">
                             <button class="edit-btn" onclick="editProduct(${p.id})">Sửa</button>
@@ -101,7 +163,23 @@
             }
         }
 
+        // Thêm sản phẩm mới (kèm nhiều ảnh và biến thể)
         async function addProduct() {
+            // Lấy danh sách ảnh phụ
+            const imageUrls = Array.from(document.querySelectorAll('.image-url')).map(inp => inp.value.trim()).filter(url => url);
+            // Lấy danh sách biến thể
+            const variants = [];
+            document.querySelectorAll('.variant-item').forEach(item => {
+                const color = item.querySelector('.variant-color')?.value.trim();
+                const size = item.querySelector('.variant-size')?.value.trim();
+                const price = parseInt(item.querySelector('.variant-price')?.value);
+                const stock = parseInt(item.querySelector('.variant-stock')?.value) || 0;
+                const image_url = item.querySelector('.variant-image')?.value.trim() || null;
+                if (color && size && !isNaN(price)) {
+                    variants.push({ color, size, price, stock, image_url });
+                }
+            });
+
             const product = {
                 name: document.getElementById('productName').value,
                 price: parseInt(document.getElementById('productPrice').value),
@@ -110,7 +188,9 @@
                 category: document.getElementById('productCategory').value,
                 description: document.getElementById('productDescription').value,
                 stock: parseInt(document.getElementById('productStock').value),
-                tag: document.getElementById('productTag').value
+                tag: document.getElementById('productTag').value,
+                images: imageUrls,
+                variants: variants
             };
             const res = await fetch(`${API_URL}/products`, {
                 method: 'POST',
@@ -119,28 +199,33 @@
             });
             const data = await res.json();
             alert(data.message);
-            if (data.success) fetchProducts();
-        }
-
-        async function deleteProduct(id) {
-            if (confirm('Xóa sản phẩm này?')) {
-                const res = await fetch(`${API_URL}/products/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                alert(data.message);
-                if (data.success) fetchProducts();
+            if (data.success) {
+                // Reset form
+                document.getElementById('addProductForm').reset();
+                document.getElementById('imagesContainer').innerHTML = '<div class="image-item"><input type="text" class="image-url" placeholder="URL ảnh phụ 1"><button type="button" onclick="removeImage(this)">Xóa</button></div>';
+                document.getElementById('variantsContainer').innerHTML = '<div class="variant-item"><input type="text" class="variant-color" placeholder="Màu"><input type="text" class="variant-size" placeholder="Size"><input type="number" class="variant-price" placeholder="Giá"><input type="number" class="variant-stock" placeholder="Tồn kho"><input type="text" class="variant-image" placeholder="URL ảnh (tùy chọn)"><button type="button" onclick="removeVariant(this)">Xóa</button></div>';
+                fetchProducts();
             }
         }
 
-        async function editProduct(id) {
-            // Đơn giản hóa: chuyển hướng đến trang sửa (có thể tạo sau)
+        // Xóa sản phẩm
+        async function deleteProduct(id) {
+            if (!confirm('Xóa sản phẩm này?')) return;
+            const res = await fetch(`${API_URL}/products/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) fetchProducts();
+        }
+
+        // Sửa sản phẩm (có thể tạo trang edit riêng)
+        function editProduct(id) {
             window.location.href = `/seller/edit-product.html?id=${id}`;
         }
 
-        // Lấy thông tin user hiện tại
-        let currentUser = null;
+        // Xác thực và lấy user hiện tại
         async function checkAuth() {
             const res = await fetch(`${API_URL}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }

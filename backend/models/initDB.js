@@ -147,6 +147,23 @@ function initializeDatabase() {
             if (err) console.error('❌ Lỗi tạo bảng stores:', err.message);
             else console.log('✅ Bảng stores đã sẵn sàng');
         });
+        // Bảng notifications
+db.run(`
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        data TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+`, (err) => {
+    if (err) console.error('❌ Lỗi tạo bảng notifications:', err.message);
+    else console.log('✅ Bảng notifications đã sẵn sàng');
+});
 
         // Bảng product_variants
         db.run(`

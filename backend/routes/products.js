@@ -58,9 +58,8 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', authenticate, requireSeller, (req, res) => {
-    const { name, price, old_price, image, category, description, stock, tag } = req.body;
+    const { name, price, old_price, image, category, description, stock, tag, images = [], variants = [] } = req.body;
     const userId = req.user.id;
-    console.log('Adding product for user:', userId, 'data:', req.body); // log
 
     db.run(
         `INSERT INTO products (user_id, name, price, old_price, image, category, description, stock, tag)
@@ -68,10 +67,34 @@ router.post('/', authenticate, requireSeller, (req, res) => {
         [userId, name, price, old_price, image, category, description, stock, tag],
         function(err) {
             if (err) {
-                console.error('❌ Database error:', err.message); // log lỗi
+                console.error('❌ Lỗi thêm sản phẩm:', err.message);
                 return res.status(500).json({ success: false, message: 'Lỗi thêm sản phẩm: ' + err.message });
             }
-            res.json({ success: true, message: 'Đã thêm sản phẩm', productId: this.lastID });
+            const productId = this.lastID;
+
+            // Thêm ảnh phụ
+            if (images.length > 0) {
+                const stmt = db.prepare('INSERT INTO product_images (product_id, image_url, display_order) VALUES (?, ?, ?)');
+                images.forEach((url, idx) => {
+                    stmt.run([productId, url, idx], (err) => {
+                        if (err) console.error('Lỗi thêm ảnh phụ:', err);
+                    });
+                });
+                stmt.finalize();
+            }
+
+            // Thêm biến thể (màu, size)
+            if (variants.length > 0) {
+                const stmt = db.prepare(`INSERT INTO product_variants (product_id, color, size, price, stock, image_url) VALUES (?, ?, ?, ?, ?, ?)`);
+                variants.forEach(v => {
+                    stmt.run([productId, v.color, v.size, v.price, v.stock, v.image_url || null], (err) => {
+                        if (err) console.error('Lỗi thêm biến thể:', err);
+                    });
+                });
+                stmt.finalize();
+            }
+
+            res.json({ success: true, message: 'Đã thêm sản phẩm', productId });
         }
     );
 });
