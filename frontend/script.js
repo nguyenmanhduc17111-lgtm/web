@@ -350,6 +350,8 @@ async function processPayment() {
         document.getElementById('cartCount').textContent = '0';
         closeCheckoutModal();
         document.getElementById('checkoutForm').reset();
+        // Tải lại thông báo sau khi đặt hàng
+        loadNotifications();
     }
 }
 
@@ -392,6 +394,7 @@ async function login() {
         closeLoginModal();
         updateUserUI();
         await loadCartCount();
+        loadNotifications(); // Tải thông báo sau khi đăng nhập
     }
 }
 
@@ -400,7 +403,7 @@ async function register() {
     const email = document.getElementById('regEmail').value;
     const password = document.getElementById('regPassword').value;
     const confirmPassword = document.getElementById('regConfirmPassword').value;
-    const role = document.querySelector('input[name="role"]:checked').value; // thêm dòng này
+    const role = document.querySelector('input[name="role"]:checked').value;
 
     if (!username || !email || !password || !confirmPassword) {
         showNotification('Vui lòng điền đầy đủ thông tin!');
@@ -415,7 +418,6 @@ async function register() {
         return;
     }
 
-    // Gửi thêm trường role
     const data = await apiCall('/auth/register', 'POST', { username, email, password, role });
     showNotification(data.message);
     if (data.success) {
@@ -440,6 +442,7 @@ async function checkLoginStatus() {
         currentUser = null;
     }
     updateUserUI();
+    if (currentUser) loadNotifications(); // Nếu đã đăng nhập, tải thông báo
 }
 
 function updateUserUI() {
@@ -448,7 +451,6 @@ function updateUserUI() {
         document.querySelector('.user-info').style.display = 'flex';
         document.getElementById('usernameDisplay').textContent = currentUser.username;
 
-        // Xử lý menu seller
         const sellerMenu = document.getElementById('sellerMenu');
         if (currentUser.role === 'seller') {
             sellerMenu.style.display = 'block';
@@ -476,6 +478,98 @@ function logout() {
 }
 
 // ===== THÔNG BÁO =====
+let currentNotifications = [];
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+async function loadNotifications() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+        const res = await fetch(`${API_URL}/notifications`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentNotifications = data.notifications;
+            const unread = data.unreadCount;
+            const badge = document.getElementById('notificationBadge');
+            if (unread > 0) {
+                badge.textContent = unread;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+            renderNotificationList();
+        }
+    } catch (err) {
+        console.error('Lỗi load notifications:', err);
+    }
+}
+
+function renderNotificationList() {
+    const container = document.getElementById('notificationList');
+    if (!container) return;
+    if (currentNotifications.length === 0) {
+        container.innerHTML = '<div class="notification-item">Không có thông báo</div>';
+        return;
+    }
+    container.innerHTML = currentNotifications.map(n => `
+        <div class="notification-item ${n.is_read ? '' : 'unread'}" data-id="${n.id}" onclick="markRead(${n.id})">
+            <div><strong>${escapeHtml(n.title)}</strong></div>
+            <div>${escapeHtml(n.message)}</div>
+            <small>${new Date(n.created_at).toLocaleString()}</small>
+        </div>
+    `).join('');
+}
+
+async function markRead(id) {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    loadNotifications();
+}
+
+async function markAllNotificationsRead() {
+    const token = localStorage.getItem('token');
+    await fetch(`${API_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    loadNotifications();
+}
+
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notificationDropdown');
+    if (!dropdown) return;
+    if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+        loadNotifications();
+        dropdown.style.display = 'block';
+    } else {
+        dropdown.style.display = 'none';
+    }
+}
+
+// Đóng dropdown khi click ra ngoài
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('notificationDropdown');
+    const icon = document.querySelector('.notification-icon');
+    if (dropdown && !dropdown.contains(event.target) && icon && !icon.contains(event.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+// ===== MODAL THÔNG BÁO CHUNG =====
 function showNotification(message) {
     document.getElementById('notificationMessage').textContent = message;
     document.getElementById('notificationModal').style.display = 'block';
