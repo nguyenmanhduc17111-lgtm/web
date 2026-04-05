@@ -165,6 +165,19 @@ db.run(`
     else console.log('✅ Bảng notifications đã sẵn sàng');
 });
 
+db.run(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        code TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+`, (err) => {
+    if (err) console.error('❌ Lỗi tạo bảng password_resets:', err.message);
+    else console.log('✅ Bảng password_resets đã sẵn sàng');
+});
+
         // Bảng product_variants
         db.run(`
             CREATE TABLE IF NOT EXISTS product_variants (

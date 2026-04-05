@@ -88,7 +88,7 @@ function displayProducts() {
         productGrid.innerHTML = '<div class="no-products">Không tìm thấy sản phẩm</div>';
         return;
     }
-
+    
     productGrid.innerHTML = filtered.map(product => `
         <div class="product-card" onclick="viewProductDetail(${product.id})" style="cursor: pointer;">
             <div class="product-image">
@@ -586,3 +586,109 @@ window.onclick = function (event) {
         if (event.target === modal) modal.style.display = 'none';
     });
 };
+// ===== ĐỔI MẬT KHẨU =====
+function openChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'block';
+}
+function closeChangePasswordModal() {
+    document.getElementById('changePasswordModal').style.display = 'none';
+    document.getElementById('changePasswordForm').reset();
+}
+
+async function changePassword() {
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmNewPassword').value;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        showNotification('Vui lòng nhập đầy đủ thông tin!');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        showNotification('Mật khẩu mới không khớp!');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showNotification('Mật khẩu mới phải có ít nhất 6 ký tự!');
+        return;
+    }
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/password/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword, newPassword })
+    });
+    const data = await res.json();
+    showNotification(data.message);
+    if (data.success) {
+        closeChangePasswordModal();
+        // Có thể đăng xuất hoặc giữ nguyên token (token vẫn hợp lệ)
+    }
+}
+
+// ===== QUÊN MẬT KHẨU =====
+function openForgotPasswordModal() {
+    document.getElementById('forgotPasswordModal').style.display = 'block';
+    document.getElementById('resetCodeSection').style.display = 'none';
+    document.getElementById('forgotForm').reset();
+}
+function closeForgotPasswordModal() {
+    document.getElementById('forgotPasswordModal').style.display = 'none';
+}
+
+async function requestResetCode() {
+    const email = document.getElementById('resetEmail').value;
+    if (!email) {
+        showNotification('Vui lòng nhập email!');
+        return;
+    }
+    const res = await fetch(`${API_URL}/password/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (data.success) {
+        // Hiển thị mã ngay trong modal, không dùng modal thông báo
+        const codeSection = document.getElementById('resetCodeSection');
+        // Tạo hoặc cập nhật thẻ hiển thị mã
+        let codeDisplay = document.getElementById('codeDisplay');
+        if (!codeDisplay) {
+            codeDisplay = document.createElement('div');
+            codeDisplay.id = 'codeDisplay';
+            codeDisplay.style.cssText = 'background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;';
+            codeSection.parentNode.insertBefore(codeDisplay, codeSection);
+        }
+        codeDisplay.innerHTML = `✅ Mã xác nhận của bạn: <strong>${data.code}</strong><br>(Sao chép mã và nhập vào ô bên dưới)`;
+        codeDisplay.style.display = 'block';
+        document.getElementById('resetCodeSection').style.display = 'block';
+    } else {
+        showNotification(data.message);
+    }
+}
+
+async function resetPassword() {
+    const email = document.getElementById('resetEmail').value;
+    const code = document.getElementById('resetCode').value;
+    const newPassword = document.getElementById('resetNewPassword').value;
+    if (!email || !code || !newPassword) {
+        showNotification('Vui lòng nhập đầy đủ thông tin!');
+        return;
+    }
+    if (newPassword.length < 6) {
+        showNotification('Mật khẩu mới phải có ít nhất 6 ký tự!');
+        return;
+    }
+    const res = await fetch(`${API_URL}/password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code, newPassword })
+    });
+    const data = await res.json();
+    showNotification(data.message);
+    if (data.success) {
+        closeForgotPasswordModal();
+        // Có thể chuyển hướng đến trang đăng nhập
+    }
+}

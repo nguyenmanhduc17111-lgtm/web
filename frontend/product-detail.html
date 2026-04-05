@@ -30,6 +30,13 @@
         .review-card { border-bottom: 1px solid #eee; padding: 15px 0; }
         .reviewer-name { font-weight: bold; }
         .review-rating { color: #f39c12; margin: 5px 0; }
+        .btn-write-review { background: #2ecc71; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px; }
+        .review-form { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 10px; margin-bottom: 20px; }
+        .rating-select { display: flex; gap: 8px; margin: 10px 0; }
+        .rating-star { font-size: 24px; cursor: pointer; color: #ddd; }
+        .rating-star.active { color: #f39c12; }
+        textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin: 10px 0; min-height: 80px; }
+        .btn-submit { background: #3498db; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
         .loading { text-align: center; padding: 50px; }
     </style>
 </head>
@@ -43,21 +50,19 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
-        let currentUser = null;   // <<< thêm dòng này
+        let currentUser = null;
         let currentProduct = null;
         let selectedColor = null;
         let selectedSize = null;
         let selectedVariant = null;
 
-        // Lấy thông tin user từ token (nếu có)
+        // Lấy thông tin user từ token
         const token = localStorage.getItem('token');
         if (token) {
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 currentUser = { id: payload.id, name: payload.username };
-            } catch(e) {
-                console.error('Token không hợp lệ');
-            }
+            } catch(e) {}
         }
 
         function formatPrice(price) { return price.toLocaleString('vi-VN') + 'đ'; }
@@ -82,7 +87,7 @@
                 });
                 imagesHtml += `</div></div>`;
 
-                // Xử lý biến thể (màu, size)
+                // Xử lý biến thể
                 let variantsHtml = '';
                 if (currentProduct.variants && currentProduct.variants.length > 0) {
                     const colors = [...new Set(currentProduct.variants.map(v => v.color))];
@@ -161,7 +166,6 @@
         async function addToCart() {
             if (!currentUser) {
                 alert('Vui lòng đăng nhập để mua hàng!');
-                // Mở modal đăng nhập nếu có (có thể dùng openLoginModal nếu đã định nghĩa)
                 if (typeof openLoginModal === 'function') openLoginModal();
                 else window.location.href = '/';
                 return;
@@ -181,7 +185,6 @@
             }
 
             try {
-                const token = localStorage.getItem('token');
                 const response = await fetch('/api/cart/add', {
                     method: 'POST',
                     headers: {
@@ -192,37 +195,123 @@
                 });
                 const data = await response.json();
                 alert(data.message);
-                // Cập nhật số lượng giỏ hàng nếu có hàm loadCartCount (định nghĩa trong script.js)
-                if (typeof loadCartCount === 'function') {
-                    await loadCartCount();
-                }
+                if (typeof loadCartCount === 'function') await loadCartCount();
             } catch (error) {
-                console.error('Lỗi:', error);
+                console.error(error);
                 alert('Lỗi: ' + error.message);
             }
         }
+
+        // ===== ĐÁNH GIÁ =====
+        let selectedRating = 0;
 
         async function loadReviews() {
             try {
                 const res = await fetch(`/api/reviews/product/${productId}`);
                 const data = await res.json();
                 if (data.success) {
-                    let html = `<h3>Đánh giá (${data.stats.total_reviews})</h3>`;
-                    data.reviews.forEach(r => {
-                        html += `
-                            <div class="review-card">
-                                <div class="reviewer-name">${escapeHtml(r.user_name)}</div>
-                                <div class="review-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
-                                <div>${escapeHtml(r.comment)}</div>
-                                <small>${new Date(r.created_at).toLocaleDateString('vi-VN')}</small>
+                    let html = `<div style="display: flex; justify-content: space-between; align-items: center;"><h3>Đánh giá (${data.stats.total_reviews})</h3>`;
+                    if (currentUser) {
+                        html += `<button class="btn-write-review" onclick="toggleReviewForm()">✍️ Viết đánh giá</button>`;
+                    }
+                    html += `</div>`;
+                    
+                    // Form viết đánh giá (ẩn ban đầu)
+                    html += `
+                        <div id="reviewForm" class="review-form" style="display: none;">
+                            <h4>Viết đánh giá của bạn</h4>
+                            <div class="rating-select" id="ratingSelect">
+                                ${[1,2,3,4,5].map(r => `<span class="rating-star" data-rating="${r}" onclick="selectRating(${r})">☆</span>`).join('')}
                             </div>
-                        `;
-                    });
-                    if (data.reviews.length === 0) html += '<p>Chưa có đánh giá nào.</p>';
+                            <textarea id="reviewComment" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."></textarea>
+                            <button class="btn-submit" onclick="submitReview()">Gửi đánh giá</button>
+                        </div>
+                        <div id="reviewsList">
+                    `;
+                    
+                    if (data.reviews.length === 0) {
+                        html += '<p>Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>';
+                    } else {
+                        data.reviews.forEach(r => {
+                            html += `
+                                <div class="review-card">
+                                    <div class="reviewer-name">${escapeHtml(r.user_name)}</div>
+                                    <div class="review-rating">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                                    <div>${escapeHtml(r.comment)}</div>
+                                    <small>${new Date(r.created_at).toLocaleDateString('vi-VN')}</small>
+                                </div>
+                            `;
+                        });
+                    }
+                    html += `</div>`;
                     document.getElementById('reviewsSection').innerHTML = html;
                 }
             } catch (error) {
                 console.error(error);
+                document.getElementById('reviewsSection').innerHTML = '<p>Lỗi tải đánh giá.</p>';
+            }
+        }
+
+        function toggleReviewForm() {
+            const form = document.getElementById('reviewForm');
+            if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function selectRating(rating) {
+            selectedRating = rating;
+            const stars = document.querySelectorAll('#ratingSelect .rating-star');
+            stars.forEach((star, idx) => {
+                if (idx < rating) {
+                    star.innerHTML = '★';
+                    star.classList.add('active');
+                } else {
+                    star.innerHTML = '☆';
+                    star.classList.remove('active');
+                }
+            });
+        }
+
+        async function submitReview() {
+            if (!currentUser) {
+                alert('Vui lòng đăng nhập để đánh giá!');
+                return;
+            }
+            if (!selectedRating) {
+                alert('Vui lòng chọn số sao đánh giá!');
+                return;
+            }
+            const comment = document.getElementById('reviewComment').value.trim();
+            if (!comment) {
+                alert('Vui lòng nhập nội dung đánh giá!');
+                return;
+            }
+            try {
+                const response = await fetch('/api/reviews/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        product_id: parseInt(productId),
+                        user_id: currentUser.id,
+                        user_name: currentUser.name,
+                        rating: selectedRating,
+                        comment: comment
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Đã gửi đánh giá thành công!');
+                    toggleReviewForm();
+                    document.getElementById('reviewComment').value = '';
+                    selectedRating = 0;
+                    loadReviews(); // reload lại danh sách đánh giá
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            } catch (error) {
+                alert('❌ Lỗi: ' + error.message);
             }
         }
 
