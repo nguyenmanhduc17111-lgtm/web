@@ -63,12 +63,12 @@ router.post('/create', authMiddleware, async (req, res) => {
 
                 // 1. Thông báo cho người mua
                 await createNotification(
-                    userId,
-                    'order_placed',
-                    'Đặt hàng thành công',
-                    `Đơn hàng #${orderId} đã được tạo với tổng tiền ${totalAmount.toLocaleString()}đ.`,
-                    { orderId, totalAmount }
-                );
+                     userId,
+                     'order_placed',
+                     'Đặt hàng thành công',
+                     `Đơn hàng #${orderId}: Tiền hàng ${subtotal.toLocaleString()}đ + Phí ship 30.000đ = Tổng ${totalAmount.toLocaleString()}đ.`,
+                     { orderId, subtotal, shippingFee, totalAmount }
+                     );
 
                 // 2. Thông báo cho từng seller (mỗi shop chỉ một lần)
                 const sellerNotified = new Set();
